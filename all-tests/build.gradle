@@ -32,14 +32,14 @@ test {
 			testClassesDirs = project(':all-tests').sourceSets.test.output.classesDirs
 			include { FileTreeElement el ->
 				if (el.directory) return true
-				boolean result = el.path.hashCode() % (gradle.settings.testShardCount) == shardIndex
+				boolean result = Math.abs(el.path.hashCode() % gradle.settings.testShardCount) == shardIndex
 				if (result) {
 					includedTests << el.path
 				}
 				return result
 			}
 			doLast {
-				logger.lifecycle "Executed $includedTests"
+				logger.lifecycle "Executed ${includedTests.size()} Tests $includedTests"
 			}
 		}
 		

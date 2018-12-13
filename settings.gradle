@@ -2,10 +2,8 @@ rootProject.name = 'gradle-cacheable-jacoco'
 
 ext {
 	testShardCount = 10
-	testShardProjects = []
 }
 include "all-tests"
 for (int i = 0; i < testShardCount; ++i) {
-	testShardProjects << ":test-shard-${i}"
 	include "test-shard-${i}"
 }
