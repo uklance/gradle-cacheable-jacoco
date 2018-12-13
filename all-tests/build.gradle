@@ -1,0 +1,45 @@
+apply plugin: 'java'
+apply plugin: 'jacoco'
+
+dependencies {
+	compile 'ch.qos.logback:logback-classic:1.2.3'
+	testCompile 'junit:junit:4.12'
+}
+
+tasks.withType(Test) {
+    testLogging {
+		showStandardStreams = true
+	}
+	maxParallelForks = 10
+	forkEvery 5
+	
+	jacoco {
+		append = true
+	}
+}
+
+task generateSources {
+	doLast {
+		delete fileTree(dir: 'src/main/java/foo', include: 'Util*.java')
+		delete fileTree(dir: 'src/test/java/foo', include: 'Test*.java')
+		File testTemplate = file('src/template/java/Test.java.template')
+		File utilTemplate = file('src/template/java/Util.java.template')
+		
+		for (int i = 0; i < 100; ++i) {
+			String padded = String.format("%03d", i)
+			Map tokens = ['i': "$i", 'padded': "$padded"]
+			copy {
+				from files(testTemplate)
+				into 'src/test/java/foo'
+				rename '.*', "Test${padded}.java"
+				expand tokens
+			}
+			copy {
+				from files(utilTemplate)
+				into 'src/main/java/foo'
+				rename '.*', "Util${padded}.java"
+				expand tokens
+			}
+		}
+	}
+}
