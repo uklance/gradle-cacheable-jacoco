@@ -1,20 +1,74 @@
+import org.gradle.api.tasks.testing.*
+
 apply plugin: 'java'
-apply plugin: 'jacoco'
 
 dependencies {
 	compile 'ch.qos.logback:logback-classic:1.2.3'
 	testCompile 'junit:junit:4.12'
 }
 
-tasks.withType(Test) {
-    testLogging {
-		showStandardStreams = true
+test {
+	enabled = false
+}
+
+(0..gradle.settings.testShardCount-1).each { shardIndex ->
+	project(":test-shard-${shardIndex}") {
+		apply plugin: 'java'
+		apply plugin: 'jacoco'
+		
+		dependencies {
+			testRuntime project(':all-tests').sourceSets.test.runtimeClasspath
+		}
+		
+		testClasses {
+			dependsOn ':all-tests:testClasses'
+		}
+		
+		test {
+			ext.includedTests = new TreeSet()
+			jacoco {
+				append = false
+			}
+			testClassesDirs = project(':all-tests').sourceSets.test.output.classesDirs
+			include { FileTreeElement el ->
+				if (el.directory) return true
+				boolean result = el.path.hashCode() % (gradle.settings.testShardCount) == shardIndex
+				if (result) {
+					includedTests << el.path
+				}
+				return result
+			}
+			doLast {
+				logger.lifecycle "Executed $includedTests"
+			}
+		}
+		
+		jacocoTestReport {
+			enabled = false
+		}
 	}
-	maxParallelForks = 10
-	forkEvery 5
-	
-	jacoco {
-		append = true
+}
+
+task jacocoMerge(type: JacocoMerge) {
+	(0..gradle.settings.testShardCount-1).each { shardIndex ->
+		dependsOn ":test-shard-${shardIndex}:test"
+		executionData project(":test-shard-${shardIndex}").tasks['test']
+	}
+	destinationFile = file("$buildDir/jacoco/jacocoMerge.exec")
+	jacocoClasspath = project(":test-shard-0").configurations.jacocoAnt
+}
+
+task jacocoTestReport(type: JacocoReport) {
+	dependsOn jacocoMerge
+	executionData file("$buildDir/jacoco/jacocoMerge.exec")
+	jacocoClasspath = project(":test-shard-0").configurations.jacocoAnt
+	sourceDirectories = sourceSets.main.java
+	classDirectories = sourceSets.main.output
+	reports {
+		html {
+			enabled = true
+			destination = file("$buildDir/reports/jacoco")
+		}
 	}
 }
 

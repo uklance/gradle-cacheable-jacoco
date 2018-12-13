@@ -6,7 +6,7 @@ import static org.junit.Assert.*;
 public class Test079 {
 	@Test
 	public void doTest079() throws Exception {
-		Thread.sleep((long) (Math.random() * 1000));
+		Thread.sleep(200);
 		int result = Util079.doStuff();
 		assertEquals(79, result);
 	}
